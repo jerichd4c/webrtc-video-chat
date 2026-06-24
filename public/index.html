@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC protocol</title>
+</head>
+<body>
+    <div class="header">
+        <h1>RTC Video Call</h1>
+        <p>Waiting another user to connect...</p>
+    </div>
+
+    <div class="video-grid">
+        <div class="video-container">
+            <h3>You</h3>
+            <video id="localVideo" autoplay muted playsinline></video>
+        </div>
+
+        <div class="video-container">
+            <h3>Guest</h3>
+            <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
