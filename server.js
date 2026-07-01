@@ -58,9 +58,19 @@ io.on('connection', (socket) => {
         }); 
     });
 
-    // Disconnect event 
+    // Event: 5: disconnect event 
     socket.on('disconnect', () => {
         console.log(`Usuario desconectado: ${socket.id}`);
+    });
+
+    // Event 6: text chat
+    socket.on('chat-message', (data) => {
+        // params: {roomId, message}
+        console.log(`Reenviando mensaje en la sala ${data.roomId}`);
+        socket.to(data.roomId).emit('chat-message', {
+            message: data.message,
+            senderId: socket.id
+        });
     });
 });
 

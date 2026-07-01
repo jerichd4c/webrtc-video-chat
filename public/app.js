@@ -1,6 +1,12 @@
 // Select video HTML elements
 const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
+const muteBtn = document.getElementById('muteBtn');
+const cameraBtn = document.getElementById('cameraBtn');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const chatMessages = document.getElementById('chatMessages');
+const shareScreenBtn = document.getElementById('shareScreenBtn');
 
 // Connect to socket server 
 const socket = io('/');
@@ -9,6 +15,7 @@ const ROOM_ID = 'room-123';
 // Global variable to save data stream
 let localStream;
 let peerConnection; 
+let screenStream;
 
 // STUN server config
 const servers = {
@@ -110,5 +117,138 @@ socket.on('ice-candidate', async (data) => {
         console.error("Error al guardar la ruta de red (ICE)", e);
     }
 });
+
+/////////////////
+// UI CONTROLS //
+/////////////////
+
+// Mute/unmute user function 
+muteBtn.addEventListener('click', () => {
+    // Get audio track from localstream
+    const audioTrack = localStream.getAudioTracks()[0];
+
+    // If unmute, mute
+    if (audioTrack.enabled) {
+        audioTrack.enabled = false;
+        muteBtn.textContent = "Unmute Audio";
+        muteBtn.classList.add('danger');
+    } else {
+    // If mute, unmute
+        audioTrack.enabled = true;
+        muteBtn.textContent = "Mute Audio";
+        muteBtn.classList.remove('danger');
+    }
+});
+
+// Turn camera off/on function
+cameraBtn.addEventListener('click', () => {
+    // Get video track from locastream
+    const videoTrack = localStream.getVideoTracks()[0];
+    
+    // Turn camera off
+    if (videoTrack.enabled) {
+        videoTrack.enabled = false;
+        cameraBtn.textContent = "Turn On Camera";
+        cameraBtn.classList.add('danger');
+    } else {
+    // Turn camera on
+        videoTrack.enabled = true;
+        cameraBtn.textContent = "Turn Off Camera";
+        cameraBtn.classList.remove('danger');
+    }
+});
+
+/////////////////////
+// TEXT CHAT LOGIC //
+/////////////////////
+
+// Show message on screen
+function showMessage(text, type) {
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('message', type); // local/remote
+    msgDiv.innerText = text;
+    chatMessages.appendChild(msgDiv);
+    
+    // Auto-scroll to see most recent message
+    chatMessages.scrollTop = chatMessages.scrollHeight
+}
+
+// Send message onclick
+sendBtn.addEventListener('click', () => {
+    const text = chatInput.value.trim();
+    if (text !== '') {
+        showMessage(text, 'local') // show on 'YOU' screen
+        socket.emit('chat-message', { roomId: ROOM_ID, message: text }); 
+        chatInput.value= ''; 
+    }
+}); 
+
+// Receive message from other user
+socket.on('chat-message', (data) => {
+    showMessage(data.message, 'remote'); // show on 'GUEST' screen
+});
+
+// Send message when pressing 'Enter'
+chatInput.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') {
+        sendBtn.click();
+    }
+});
+
+////////////////////////
+// SHARE SCREEN LOGIC //
+////////////////////////
+
+// Share screen event
+shareScreenBtn.addEventListener('click', async () => {
+    try {
+        if (!screenStream) {
+            // 1. Ask browser to screenshare
+            screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            const screenTrack = screenStream.getVideoTracks()[0];
+
+            // 2. Find who is sending the video
+            const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+
+            // 3. Replace stream with video
+            sender.replaceTrack(screenTrack);
+
+            // 4. Update HTML 
+            localVideo.srcObject = screenStream;
+            shareScreenBtn.textContent = "Stop Sharing";
+            shareScreenBtn.classList.add('danger');
+
+            // 5. Listen if user stops screen sharing
+            screenTrack.onended = () => {
+                stopScreenSharing();
+            };
+        } else {
+            // Si ya estamos compartiendo, detenemos la captura manualmente
+            stopScreenSharing();
+        }
+    } catch (error) {
+        console.error("Error al compartir pantalla:", error);
+    }
+});
+
+// Stop screen sharing function
+function stopScreenSharing() {
+    if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop());
+        screenStream = null; 
+    }
+
+    // Get original video track 
+    const videoTrack = localStream.getVideoTracks()[0];
+    const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+
+    // Use camera again
+    sender.replaceTrack(videoTrack);
+
+    // Update HTML
+    localVideo.srcObject = localStream;
+    shareScreenBtn.textContent = "Share Screen";
+    shareScreenBtn.classList.remove('danger');
+}
 
 startCamera();

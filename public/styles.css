@@ -1,0 +1,193 @@
+/* Reseteo básico para que se vea igual en todos los navegadores */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #121212; /* Fondo oscuro principal */
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Barra superior */
+.header {
+    text-align: center;
+    padding: 20px;
+    width: 100%;
+    background-color: #1e1e1e; /* Tono ligeramente más claro que el fondo */
+    border-bottom: 1px solid #333;
+}
+
+.header h1 {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.header p {
+    color: #aaaaaa;
+    font-size: 14px;
+}
+
+/* Contenedor central */
+.main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    padding: 30px 20px;
+    flex-grow: 1;
+}
+
+/* Grilla donde van los videos */
+.video-grid {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap; /* Permite que pasen a la siguiente línea si la pantalla es pequeña */
+    gap: 20px;
+    width: 100%;
+}
+
+/* Cajas individuales de cada cámara */
+.video-container {
+    background-color: #1e1e1e;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4); /* Sombra para darle profundidad */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 320px;
+    max-width: 500px;
+}
+
+.video-container h3 {
+    margin-bottom: 12px;
+    font-size: 16px;
+    color: #e0e0e0;
+}
+
+/* Las etiquetas de video reales */
+video {
+    width: 100%;
+    border-radius: 8px;
+    background-color: #000; /* Fondo negro mientras carga la cámara */
+    object-fit: cover; /* Evita que el video se estire feo */
+    aspect-ratio: 16/9; /* Mantiene la proporción clásica de cámara web */
+}
+
+/* =========================================
+   Estilos preparados para los futuros botones 
+   ========================================= */
+.controls {
+    margin-top: 40px;
+    display: flex;
+    gap: 15px;
+    background-color: #1e1e1e;
+    padding: 15px 30px;
+    border-radius: 50px; /* Bordes totalmente redondeados estilo "píldora" */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.btn {
+    background-color: #333333;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+.btn:hover {
+    background-color: #4d4d4d;
+}
+
+/* Botones de acción peligrosa (ej. Colgar, Mutear) */
+.btn.danger {
+    background-color: #d32f2f;
+}
+
+.btn.danger:hover {
+    background-color: #f44336;
+}
+
+/* =========================================
+   Estilos del Chat de Texto
+   ========================================= */
+.chat-container {
+    width: 100%;
+    max-width: 600px; /* Para que no sea más ancho que los videos */
+    background-color: #1e1e1e;
+    border-radius: 12px;
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+}
+
+.chat-messages {
+    height: 200px;
+    overflow-y: auto; /* Agrega scroll si hay muchos mensajes */
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Estilo base de la burbuja de mensaje */
+.message {
+    padding: 8px 14px;
+    border-radius: 15px;
+    max-width: 80%;
+    word-wrap: break-word;
+    font-size: 14px;
+}
+
+/* Tus mensajes (Derecha, azul) */
+.message.local {
+    align-self: flex-end;
+    background-color: #007bff;
+    color: white;
+    border-bottom-right-radius: 2px;
+}
+
+/* Mensajes del invitado (Izquierda, gris) */
+.message.remote {
+    align-self: flex-start;
+    background-color: #333333;
+    color: white;
+    border-bottom-left-radius: 2px;
+}
+
+.chat-input-area {
+    display: flex;
+    padding: 10px;
+    background-color: #2a2a2a;
+    gap: 10px;
+    border-top: 1px solid #333;
+}
+
+.chat-input-area input {
+    flex: 1;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 20px;
+    background-color: #444;
+    color: white;
+    outline: none;
+    font-family: inherit;
+}
+
+.chat-input-area input::placeholder {
+    color: #aaaaaa;
+}
