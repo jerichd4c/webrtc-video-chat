@@ -23,6 +23,36 @@ app.use(express.static('public'));
 io.on('connection', (socket) => {
     console.log(`Usuario conectado: ${socket.id}`);
 
+    // Event 0: User lands in waiting room
+    socket.on('request-join', (roomId) => {
+        // If theres no admin, joins room directly
+        if (!roomAdmins[roomId]) {
+            roomAdmins[roomId] = socket.id;
+            socket.emit('role', 'admin');
+            socket.emit('join-accepted');
+        } else {
+            // Later users are guests
+            socket.emit('role', 'guest');
+            socket.emit('waiting-for-admin');
+
+            // Tell admin user wants to join
+            const adminId = roomAdmins[roomId];
+            socket.to(adminId).emit('guest-request', { guestId: socket.id });
+        }
+    });
+
+    // Evenet 0.5: Admin responds
+    socket.on('admin-response', (data) => {
+        // params {guestId, accept: boolean, roomId}
+        if (data.accept) {
+            // True
+            socket.to(data.guestId).emit('join-accepted'); 
+        } else {
+            // False
+            socket.to(data.guestId).emit('join-rejected'); 
+        }
+    });
+
     // Event 1: join room
     socket.on('join-room', (roomId) => {
         socket.join(roomId);

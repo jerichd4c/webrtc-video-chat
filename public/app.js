@@ -330,4 +330,53 @@ socket.on('force-mute', () => {
     }
 });
 
-startCamera();
+////////////////////////
+// WAITING ROOM LOGIC //
+////////////////////////
+
+// 1. Join waiting room
+socket.emit('request-join', ROOM_ID);
+
+// 2. Show black screen while admind decides
+socket.on('waiting-for-admin', () => {
+    document.getElementById('waitingScreen').style.display = 'flex';
+}); 
+
+// Accepted
+socket.on('join-accepted', () => {
+    document.getElementById('waitingScreen').style.display = 'none';
+    startCamera(); 
+});
+
+// Rejected
+socket.on('join-rejected', () => {
+    const waitingScreen = document.getElementById('waitingScreen');
+    waitingScreen.style.display = 'flex';
+    waitingScreen.innerHTML = '<h2 style="color: #ff4444;">Admin has rejected you, try again..</h2>';
+});
+
+// 3. Admin exclusive event, show new guest notification
+socket.on('guest-request', (data) => {
+    const notifContainer = document.getElementById('adminNotifications');
+
+    // Create notificacion
+    const notif = document.createElement('div');
+    notif.classList.add('notification');
+    notif.innerHTML = `
+        <p>User <strong>${data.guestId.substring(0,4)}</strong> wants to enter the room.</p>
+        <div class="notification-btns">
+            <button class="btn" style="background-color: #28a745; padding: 8px 15px;" onclick="respondRequest('${data.guestId}', true, this)">Accept</button>
+            <button class="btn danger" style="padding: 8px 15px;" onclick="respondRequest('${data.guestId}', false, this)">Reject</button>
+        </div>
+    `;
+    notifContainer.appendChild(notif);
+});
+
+// 4. Global function: triggers when admin selects an option (true/false)
+window.respondRequest = function(guestId, accept, btnElement) {
+    // Send decision to 'server.js'
+    socket.emit('admin-response', { guestId: guestId, accept: accept, roomId: ROOM_ID });
+
+    // Remove notification from page
+    btnElement.parentElement.parentElement.remove();
+};
