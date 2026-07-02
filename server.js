@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
+
 // Initial socket.io config
 const io = new Server(server, {
     cors: {
@@ -12,6 +13,9 @@ const io = new Server(server, {
             methods: ["GET", "POST"]
     }
 });
+
+// Dictionary for admin role
+const roomAdmins = {};
 
 // Use 'public' folder
 app.use(express.static('public'));
@@ -24,6 +28,15 @@ io.on('connection', (socket) => {
         socket.join(roomId);
         // Store room instance
         socket.roomId = roomId;
+
+        // Make user admin if there isnt any
+        if (!roomAdmins[roomId]) {
+            roomAdmins[roomId] = socket.id;
+            socket.emit('role', 'admin'); 
+        } else {
+            socket.emit('role', 'guest'); 
+        }
+
         console.log(`Usuario ${socket.id} se unio a la sala: ${roomId}`);
     
         // Notify other users in room that a user connected
@@ -63,6 +76,12 @@ io.on('connection', (socket) => {
     // Event: 5: disconnect event, notify other users when someone leaves the room
     socket.on('disconnect', () => {
         console.log(`Usuario desconectado: ${socket.id}`);
+
+        // Delete admins registry
+        if (socket.roomId && roomAdmins[socket.roomId] === socket.id) {
+            delete roomAdmins[socket.roomId];
+        }
+
         if (socket.roomId) {
             socket.to(socket.roomId).emit('user-disconnected', socket.id);
         } 
@@ -77,6 +96,15 @@ io.on('connection', (socket) => {
             senderId: socket.id
         });
     });
+
+    // Event 7: mute all as admin
+    socket.on('mute-all', (roomId) => {
+        // Verify if its admin sending the request
+        if (roomAdmins[roomId] === socket.id) {
+            socket.to(roomId).emit('force-mute');
+        }
+    });
+
 });
 
 const PORT = process.env.PORT || 3000;

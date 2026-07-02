@@ -2,6 +2,7 @@
 const localVideo = document.getElementById('localVideo');
 const videoGrid = document.getElementById('video-grid');
 const muteBtn = document.getElementById('muteBtn');
+const muteAllBtn = document.getElementById('muteAllBtn');
 const cameraBtn = document.getElementById('cameraBtn');
 const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -298,5 +299,35 @@ function stopScreenSharing() {
     shareScreenBtn.textContent = "Share Screen";
     shareScreenBtn.classList.remove('danger');
 }
+
+/////////////////
+// ROLES LOGIC //
+/////////////////
+
+// Receive admin role if user is the first to enter
+socket.on('role', (role) => {
+    if (role === 'admin') {
+        muteAllBtn.style.display = 'block';
+    }
+});
+
+// Mute all users on click
+muteAllBtn.addEventListener('click', () => {
+    socket.emit('mute-all', ROOM_ID);
+});
+
+// Normal guests get muted
+socket.on('force-mute', () => {
+    const audioTrack = localStream.getAudioTracks()[0];
+    
+    // Mute audio track
+    if (audioTrack.enabled) {
+        audioTrack.enabled = false;
+        
+        // Update UI
+        muteBtn.textContent = "Unmute Audio";
+        muteBtn.classList.add('danger');
+    }
+});
 
 startCamera();
