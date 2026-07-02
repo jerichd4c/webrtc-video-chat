@@ -22,8 +22,10 @@ io.on('connection', (socket) => {
     // Event 1: join room
     socket.on('join-room', (roomId) => {
         socket.join(roomId);
+        // Store room instance
+        socket.roomId = roomId;
         console.log(`Usuario ${socket.id} se unio a la sala: ${roomId}`);
-
+    
         // Notify other users in room that a user connected
         socket.to(roomId).emit('user-connected', socket.id);
     }); 
@@ -31,8 +33,8 @@ io.on('connection', (socket) => {
     // Event 2: resend offer from peer 1 to peer 2
     socket.on('offer', (data) => {
         // params: { sdp, roomId}
-        console.log(`Reenviando oferta de ${socket.id} a la sala ${data.roomId}`);
-        socket.to(data.roomId).emit('offer', {
+        console.log(`Reenviando oferta de ${socket.id} a la sala ${data.targetId}`);
+        socket.to(data.targetId).emit('offer', {
             sdp: data.sdp,
             senderId: socket.id
         });
@@ -41,8 +43,8 @@ io.on('connection', (socket) => {
     // Event 3: send the answer from peer 2 to peer 1
     socket.on('answer', (data) => {
         // params: { sdp, roomId}
-        console.log(`Reenviando respuesta de ${socket.id} a la sala ${data.roomId}`);
-        socket.to(data.roomId).emit('answer', {
+        console.log(`Reenviando respuesta de ${socket.id} a la sala ${data.targetId}`);
+        socket.to(data.targetId).emit('answer', {
             sdp: data.sdp,
             senderId: socket.id
         });
@@ -52,15 +54,18 @@ io.on('connection', (socket) => {
     socket.on('ice-candidate', (data) => {
         // params: { candidate, roomId}
         console.log(`Reenviando candidato ICE de ${socket.id}`);
-        socket.to(data.roomId).emit('ice-candidate', {
+        socket.to(data.targetId).emit('ice-candidate', {
             candidate: data.candidate,
             senderId: socket.id
         }); 
     });
 
-    // Event: 5: disconnect event 
+    // Event: 5: disconnect event, notify other users when someone leaves the room
     socket.on('disconnect', () => {
         console.log(`Usuario desconectado: ${socket.id}`);
+        if (socket.roomId) {
+            socket.to(socket.roomId).emit('user-disconnected', socket.id);
+        } 
     });
 
     // Event 6: text chat

@@ -1,6 +1,6 @@
 // Select video HTML elements
 const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
+const videoGrid = document.getElementById('video-grid');
 const muteBtn = document.getElementById('muteBtn');
 const cameraBtn = document.getElementById('cameraBtn');
 const chatInput = document.getElementById('chatInput');
@@ -14,8 +14,10 @@ const ROOM_ID = 'room-123';
 
 // Global variable to save data stream
 let localStream;
-let peerConnection; 
 let screenStream;
+
+// Store multiple users by ID
+const peers = {};
 
 // STUN server config
 const servers = {
@@ -44,10 +46,7 @@ async function startCamera() {
 
         console.log("Camara y microfono capturados con exito");
 
-        // Call init WebRTC function
-        createPeerConnection();
-
-        // User tell server to join the room
+        // User ask server to join the room
         socket.emit('join-room', ROOM_ID);
 
     } catch (error) {
@@ -57,64 +56,107 @@ async function startCamera() {
 }
 
 // Init WebRTC function
-function createPeerConnection() {
+function createPeerConnection(userId) {
     // Connection instance using STUN server
-    peerConnection = new RTCPeerConnection(servers);
+    const pc = new RTCPeerConnection(servers);
 
     // Load stream data to send it to guest
     localStream.getTracks().forEach((track) => {
-        peerConnection.addTrack(track, localStream);
+        pc.addTrack(track, localStream);
     });
 
     // Gets audio and video from guest
-    peerConnection.ontrack = (event) => {
+    pc.ontrack = (event) => {
+        // Verify if video already exist on screen
+        if (!document.getElementById(`video-${userId}`)) {
+            const videoContainer = document.createElement('div');
+            videoContainer.classList.add('video-container');
+            // Use ID for each user
+            videoContainer.id = `container-${userId}`;
+
+            const title = document.createElement('h3');
+            // Show user ID 
+            title.innerText = `Guest (${userId.substring(0,4)})`;
+
+            const video = document.createElement('video');
+            video.id = `video-${userId}`;
+            video.autoplay = true;
+            video.playsInline = true;
+            video.srcObject = event.streams[0];
+
+            videoContainer.appendChild(title);
+            videoContainer.appendChild(video);
+            videoGrid.appendChild(videoContainer);
+        }
         console.log("Recibiendo el video del otro usuario");
-        // Put receive data in the HTML <video tag>
-        remoteVideo.srcObject = event.streams[0];
     };
 
     // ICE process: if theres a candidadte, send route to other user
-    peerConnection.onicecandidate = (event) => {
+    pc.onicecandidate = (event) => {
         if (event.candidate) {
             socket.emit('ice-candidate', {
                 candidate: event.candidate,
-                roomId: ROOM_ID
+                targetId: userId
             });
         }
     };
+    
+    peers[userId] = pc;
     console.log("Motor WebRTC (PeerConnection) inicializado y listo.");
+    return pc;
 }
 
 // 1st user connects, creates OFFER
 socket.on('user-connected', async (userId) => {
     console.log("Nuevo usuario detectado. Creando y enviado oferta...")
+    const peerConnection = createPeerConnection(userId);
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
-    socket.emit('offer', { sdp: offer, roomId: ROOM_ID });
+    socket.emit('offer', { sdp: offer, targetId: userId });
 });
 
 // 2nd user receives offer, creates RESPONSE
 socket.on('offer', async (data) => {
     console.log("Oferta recibida. Creando y enviando respuesta...");
+    const peerConnection = createPeerConnection(data.senderId);
     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
     // 2nd users responds
-    socket.emit('answer', { sdp: answer, roomId: ROOM_ID })
+    socket.emit('answer', { sdp: answer, targetId: data.senderId })
 });
 
-// 1st user receives the response and close the trade
+// Final answer now supports up to 4 users
 socket.on('answer', async (data) => {
     console.log("Respuesta recibida. Conexion P2P en proceso");
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+    const pc = peers[data.senderId];
+    if (pc) {
+        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+    }
 });
 
 // Both users trade and save net routes (ICE)
 socket.on('ice-candidate', async (data) => {
-    try {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-    } catch (e) {
-        console.error("Error al guardar la ruta de red (ICE)", e);
+    const pc = peers[data.senderId];
+    if (pc) {
+        try {
+            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        } catch (e) {
+            console.error("Error al guardar la ruta de red (ICE)", e);
+        }
+    }
+});
+
+// Delete video if someone disconnects
+socket.on('user-disconnected', (userId) => {
+    if (peers[userId]) {
+        peers[userId].close();
+        // Delete id from dictionary
+        delete peers[userId];
+    }
+    const userContainer = document.getElementById(`container-${userId}`);
+    if (userContainer) {
+        userContainer.remove(); 
     }
 });
 
@@ -207,11 +249,13 @@ shareScreenBtn.addEventListener('click', async () => {
             screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
             const screenTrack = screenStream.getVideoTracks()[0];
 
-            // 2. Find who is sending the video
-            const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
-
-            // 3. Replace stream with video
-            sender.replaceTrack(screenTrack);
+            // 2. Iterate over each user to send shared screen
+            Object.values(peers).forEach(pc => {
+                const sender = pc.getSenders().find(s => s.track.kind === 'video');
+                if (sender) {
+                    sender.replaceTrack(screenTrack);
+                }
+            });
 
             // 4. Update HTML 
             localVideo.srcObject = screenStream;
@@ -240,10 +284,14 @@ function stopScreenSharing() {
 
     // Get original video track 
     const videoTrack = localStream.getVideoTracks()[0];
-    const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
 
-    // Use camera again
-    sender.replaceTrack(videoTrack);
+    // Iterate over each user to stop return user web camera
+    Object.values(peers).forEach(pc => {
+        const sender = pc.getSenders().find(s => s.track.kind === 'video');
+            if (sender) {
+                sender.replaceTrack(videoTrack);
+            }
+        });
 
     // Update HTML
     localVideo.srcObject = localStream;
