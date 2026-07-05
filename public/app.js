@@ -8,14 +8,18 @@ const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const chatMessages = document.getElementById('chatMessages');
 const shareScreenBtn = document.getElementById('shareScreenBtn');
+const handBtn = document.getElementById('handBtn');
+const localHandIcon = document.getElementById('hand-local');
 
 // Connect to socket server 
 const socket = io('/');
 const ROOM_ID = 'room-123';
 
-// Global variable to save data stream
+// Global variables
 let localStream;
 let screenStream;
+let isHost = false;
+let isHandRaised = false;
 
 // Store multiple users by ID
 const peers = {};
@@ -85,9 +89,39 @@ function createPeerConnection(userId) {
             video.playsInline = true;
             video.srcObject = event.streams[0];
 
+            // Hand raise emote indicator
+            const handIcon = document.createElement('div');
+            handIcon.id = `hand-${userId}`;
+            handIcon.classList.add('hand-indicator');
+            handIcon.innerText = '✋';
+
             videoContainer.appendChild(title);
+            videoContainer.appendChild(handIcon);
             videoContainer.appendChild(video);
             videoGrid.appendChild(videoContainer);
+
+            // Admin exclusive buttons
+            if (isHost) {
+                const adminPanel = document.createElement('div');
+                adminPanel.classList.add('admin-controls');
+
+                // Ask unmute button
+                const unmuteReqBtn = document.createElement('button');
+                unmuteReqBtn.className = 'btn btn-small';
+                unmuteReqBtn.style.backgroundColor = '#007bff';
+                unmuteReqBtn.innerText = 'Ask to Unmute';
+                unmuteReqBtn.onclick = () => socket.emit('request-unmute', { targetId: userId, roomId: ROOM_ID });
+
+                // Kick button
+                const kickBtn = document.createElement('button');
+                kickBtn.className = 'btn btn-small danger';
+                kickBtn.innerText = 'Kick';
+                kickBtn.onclick = () => socket.emit('kick-user', { targetId: userId, roomId: ROOM_ID });
+
+                adminPanel.appendChild(unmuteReqBtn);
+                adminPanel.appendChild(kickBtn);
+                videoContainer.appendChild(adminPanel);
+            }
         }
         console.log("Recibiendo el video del otro usuario");
     };
@@ -300,14 +334,17 @@ function stopScreenSharing() {
     shareScreenBtn.classList.remove('danger');
 }
 
-/////////////////
-// ROLES LOGIC //
-/////////////////
+////////////////////////
+// ROLES LOGIC: ADMIN //
+////////////////////////
 
 // Receive admin role if user is the first to enter
 socket.on('role', (role) => {
     if (role === 'admin') {
+        isHost = true;
         muteAllBtn.style.display = 'block';
+    } else {
+        isHost = false;
     }
 });
 
@@ -327,6 +364,24 @@ socket.on('force-mute', () => {
         // Update UI
         muteBtn.textContent = "Unmute Audio";
         muteBtn.classList.add('danger');
+    }
+});
+
+// Unmute specific user 
+socket.on('please-unmute', () => {
+    // Use alert on browser
+    const wantsToUnmute = confirm("Host is asking to unmute your microphone. ¿Proceed?");
+    
+    if (wantsToUnmute) {
+        const audioTrack = localStream.getAudioTracks()[0];
+        // Only retrigger is audio is off
+        if (audioTrack && !audioTrack.enabled) {
+            audioTrack.enabled = true;
+            
+            // Update UI of admin view
+            muteBtn.textContent = "Mute Audio";
+            muteBtn.classList.remove('danger');
+        }
     }
 });
 
@@ -355,6 +410,22 @@ socket.on('join-rejected', () => {
     waitingScreen.innerHTML = '<h2 style="color: #ff4444;">Admin has rejected you, try again..</h2>';
 });
 
+// Force guest kick event
+socket.on('you-are-kicked', () => {
+    // Turn off camera and mic
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+    }
+    
+    // Reuse waiting room screen
+    const overlay = document.getElementById('waitingScreen');
+    overlay.style.display = 'flex';
+    overlay.innerHTML = '<h2 style="color: #ff4444;">You have been kicked by the admin.</h2>';
+    
+    // Disconnect socket from server
+    socket.disconnect();
+});
+
 // 3. Admin exclusive event, show new guest notification
 socket.on('guest-request', (data) => {
     const notifContainer = document.getElementById('adminNotifications');
@@ -380,3 +451,36 @@ window.respondRequest = function(guestId, accept, btnElement) {
     // Remove notification from page
     btnElement.parentElement.parentElement.remove();
 };
+
+//////////////////////
+// RAISE HAND LOGIC //
+//////////////////////
+
+// 1. Click button 
+handBtn.addEventListener('click', () => {
+
+    // Check if hand is raised or not
+    isHandRaised = !isHandRaised;
+
+    if (isHandRaised) {
+        // True
+        localHandIcon.style.display = 'block';
+        handBtn.textContent = "Lower Hand";
+        handBtn.style.backgroundColor = '#f39c12'; 
+    } else {
+        // False
+        localHandIcon.style.display = 'none';
+        handBtn.textContent = "Raise Hand";
+        handBtn.style.backgroundColor = ''; 
+    }
+
+    socket.emit('toggle-hand', { roomId: ROOM_ID, isRaised: isHandRaised });
+});
+
+// 2. Receive signal from remote user
+socket.on('user-toggled-hand', (data) => {
+    const remoteHandIcon = document.getElementById(`hand-${data.userId}`);
+    if (remoteHandIcon) {
+        remoteHandIcon.style.display = data.isRaised ? 'block' : 'none';
+    }
+});

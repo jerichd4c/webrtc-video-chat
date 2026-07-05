@@ -59,14 +59,6 @@ io.on('connection', (socket) => {
         // Store room instance
         socket.roomId = roomId;
 
-        // Make user admin if there isnt any
-        if (!roomAdmins[roomId]) {
-            roomAdmins[roomId] = socket.id;
-            socket.emit('role', 'admin'); 
-        } else {
-            socket.emit('role', 'guest'); 
-        }
-
         console.log(`Usuario ${socket.id} se unio a la sala: ${roomId}`);
     
         // Notify other users in room that a user connected
@@ -127,12 +119,55 @@ io.on('connection', (socket) => {
         });
     });
 
+    // Event 6.5: resend coords of board to servers
+    socket.on('draw', (data) => {
+        // Se lo reenviamos a todos en la sala menos al que lo dibujó
+        socket.to(data.roomId).emit('draw', data);
+    });
+
+    // Event 7: resend cleaning order to server
+    socket.on('clear-board', (roomId) => {
+        socket.to(roomId).emit('clear-board');
+    });
+
+    // ADMIN EVENTS
+    
     // Event 7: mute all as admin
     socket.on('mute-all', (roomId) => {
         // Verify if its admin sending the request
         if (roomAdmins[roomId] === socket.id) {
             socket.to(roomId).emit('force-mute');
         }
+    });
+
+    // Event 8: admin request user to turn mic on
+    socket.on('request-unmute', (data) => {
+        // params: { targetId, roomId}
+        if (roomAdmins[data.roomId] === socket.id) {
+            socket.to(data.targetId).emit('please-unmute');
+        }
+    });
+
+    // Event 9: kick user as admin
+    socket.on('kick-user', (data) => {
+        // params: {targetId, roomId} 
+        if (roomAdmins[data.roomId] === socket.id) {
+            console.log(`Admin expulsó a ${data.targetId}`);
+            // Tell user he has been kicked
+            socket.to(data.targetId).emit('you-are-kicked');
+
+            // Remove video user video from other guests
+            socket.to(data.roomId).emit('user-disconnected', data.targetId);
+        }
+    });
+    
+    // Event 10: Toggle hand
+    socket.on('toggle-hand', (data) => {
+        // params: { roomId, isRaised }
+        socket.to(data.roomId).emit('user-toggled-hand', {
+            userId: socket.id,
+            isRaised: data.isRaised
+        });
     });
 
 });

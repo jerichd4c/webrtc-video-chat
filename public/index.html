@@ -21,8 +21,9 @@
     
     <div class="main-container">
         <div class="video-grid" id="video-grid">
-            <div class="video-container">
+            <div class="video-container" id="container-local">
                 <h3>You</h3>
+                <div id="hand-local" class="hand-indicator">✋</div>
                 <video id="localVideo" autoplay muted playsinline></video>
             </div>
         </div>
@@ -30,7 +31,9 @@
         <div class="controls">
             <button id="muteBtn" class="btn">Mute Audio</button>
             <button id="cameraBtn" class="btn">Turn Off Camera</button>
+            <button id="handBtn" class="btn">Raise Hand</button>
             <button id="shareScreenBtn" class="btn" style="background-color: #28a745;">Share Screen</button>
+            <button id="boardBtn" class="btn" style="background-color: #6f42c1;">Open Board</button>
             <button id="muteAllBtn" class="btn danger" style="display: none;">Mute All</button>
         </div>
         
@@ -44,7 +47,19 @@
         </div>
     </div>
 
+        <div id="boardContainer" class="board-container" style="display: none;">
+            <div class="board-toolbar">
+                <input type="color" id="colorPicker" value="#007bff" title="Choose color">
+                <input type="range" id="brushSize" min="2" max="20" value="5" title="Brush size">
+                <button id="clearBoardBtn" class="btn btn-small danger">Clear</button>
+                <button id="closeBoardBtn" class="btn btn-small">Close</button>
+            </div>
+        <canvas id="whiteboard"></canvas>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="app.js"></script>
+    <script src="board.js"></script> 
+    
 </body>
 </html>

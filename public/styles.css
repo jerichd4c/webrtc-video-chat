@@ -59,13 +59,14 @@ body {
     background-color: #1e1e1e;
     border-radius: 12px;
     padding: 15px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4); /* Sombra para darle profundidad */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4); 
     display: flex;
     flex-direction: column;
     align-items: center;
     flex: 1;
     min-width: 320px;
     max-width: 500px;
+    position: relative; 
 }
 
 .video-container h3 {
@@ -230,4 +231,87 @@ video {
 .notification-btns {
     display: flex;
     gap: 10px;
+}
+
+/* =========================================
+   Controles individuales del Admin (NUEVO)
+   ========================================= */
+.admin-controls {
+    position: absolute;
+    bottom: 25px; /* Se posiciona arriba del borde inferior */
+    display: flex;
+    gap: 10px;
+    z-index: 10;
+}
+
+.btn-small {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 15px;
+}
+
+/* =========================================
+   Estilos de la Pizarra Digital
+   ========================================= */
+.board-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80vw;
+    height: 80vh;
+    background-color: #121212;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    z-index: 500; /* Se asegura de estar por encima de los videos */
+    overflow: hidden;
+    border: 2px solid #444;
+}
+
+.board-toolbar {
+    display: flex;
+    gap: 15px;
+    padding: 10px 20px;
+    background-color: #1e1e1e;
+    align-items: center;
+    border-bottom: 1px solid #444;
+}
+
+.board-toolbar input[type="color"] {
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 35px;
+    height: 35px;
+}
+
+#whiteboard {
+    flex-grow: 1;
+    background-color: #1a1a1a; /* Un gris muy oscuro para el lienzo */
+    cursor: crosshair; /* Cambia el ratón a una mira para dibujar */
+}
+
+/* =========================================
+   Indicador de Mano Levantada
+   ========================================= */
+.hand-indicator {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: #f39c12; 
+    color: white;
+    padding: 8px;
+    border-radius: 50%;
+    font-size: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+    display: none; /* Oculto por defecto */
+    z-index: 10;
+    animation: pop 0.3s ease-out;
+}
+
+@keyframes pop {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
 }
