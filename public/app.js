@@ -261,10 +261,8 @@ function showMessage(text, type, senderId = null) {
 
     const textSpan = document.createElement('span');
 
-    // Pass text to span
+    // Pass text to span and append to main div
     textSpan.innerText = text;
-
-    msgDiv.innerText = text;
     chatMessages.appendChild(msgDiv);
     
     // Auto-scroll to see most recent message
