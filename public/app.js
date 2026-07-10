@@ -20,6 +20,7 @@ let localStream;
 let screenStream;
 let isHost = false;
 let isHandRaised = false;
+let isAllMuted = false;
 
 // Store multiple users by ID
 const peers = {};
@@ -263,7 +264,9 @@ function showMessage(text, type, senderId = null) {
 
     // Pass text to span and append to main div
     textSpan.innerText = text;
+
     chatMessages.appendChild(msgDiv);
+    msgDiv.appendChild(textSpan);
     
     // Auto-scroll to see most recent message
     chatMessages.scrollTop = chatMessages.scrollHeight
