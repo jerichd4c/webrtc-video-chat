@@ -211,7 +211,7 @@ muteBtn.addEventListener('click', () => {
     });
 
     // If unmute, mute
-    if (!isMuted) {
+    if (isMuted) {
         muteBtn.textContent = "Unmute Audio";
         muteBtn.classList.add('danger');
     } else {
@@ -260,6 +260,10 @@ function showMessage(text, type, senderId = null) {
     }
 
     const textSpan = document.createElement('span');
+
+    // Pass text to span
+    textSpan.innerText = text;
+
     msgDiv.innerText = text;
     chatMessages.appendChild(msgDiv);
     
@@ -371,9 +375,23 @@ socket.on('role', (role) => {
     }
 });
 
-// Mute all users on click
+// Toggle audio on users
 muteAllBtn.addEventListener('click', () => {
-    socket.emit('mute-all', ROOM_ID);
+    isAllMuted = !isAllMuted;
+
+    // Silence all guests
+    if (isAllMuted) {
+        socket.emit('mute-all', ROOM_ID);
+        muteAllBtn.textContent = "Ask Unmute All";
+        muteAllBtn.classList.remove('danger');
+        muteAllBtn.style.backgroundColor = '#007bff';
+    } else {
+    // Ask everyone to reactivate their mics
+        socket.emit('request-unmute-all', ROOM_ID);
+        muteAllBtn.textContent = "Mute All";
+        muteAllBtn.style.backgroundColor = ''; 
+        muteAllBtn.classList.add('danger');
+    }
 });
 
 // Normal guests get muted

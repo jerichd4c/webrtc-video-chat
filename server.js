@@ -140,6 +140,13 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Event 7.5: Admin requests ALL users to unmute
+    socket.on('request-unmute-all', (roomId) => {
+        if (roomAdmins[roomId] === socket.id) {
+            socket.to(roomId).emit('please-unmute');
+        }
+    });
+
     // Event 8: admin request user to turn mic on
     socket.on('request-unmute', (data) => {
         // params: { targetId, roomId}
