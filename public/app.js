@@ -206,13 +206,12 @@ muteBtn.addEventListener('click', () => {
     // Iterate to get every audio track 
     localStream.getAudioTracks().forEach(track => {
         track.enabled = !track.enabled;
-        // If its disable, its 100% muted
+        // If its disabled, its 100% muted
         isMuted = !track.enabled;
     });
 
     // If unmute, mute
     if (!isMuted) {
-        audioTrack.enabled = false;
         muteBtn.textContent = "Unmute Audio";
         muteBtn.classList.add('danger');
     } else {
@@ -299,7 +298,7 @@ shareScreenBtn.addEventListener('click', async () => {
     try {
         // Verifies if screenshare is allowed
         if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-            alert("Screen sharing is not supported on mobile browsers.");
+            alert("Screen sharing is not supported on this mobile browser.");
             return; 
         }
 
