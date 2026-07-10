@@ -124,3 +124,61 @@ socket.on('draw', (data) => {
 socket.on('clear-board', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 });
+
+//////////////////////////
+// TOUCH LOGIC (MOBILE) //
+//////////////////////////
+
+// Aux: get touch control coords on phone
+function getTouchPos(canvasDom, touchEvent) {
+    const rect = canvasDom.getBoundingClientRect();
+    return {
+        x: touchEvent.touches[0].clientX - rect.left,
+        y: touchEvent.touches[0].clientY - rect.top
+    };
+}
+
+// 1. Finger down event
+canvas.addEventListener('touchstart', (e) => {
+    // Avoid screen chaging position
+    e.preventDefault(); 
+    isDrawing = true;
+    const pos = getTouchPos(canvas, e);
+    lastX = pos.x;
+    lastY = pos.y;
+}, { passive: false });
+
+// 2. Finger trace event
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!isDrawing) return;
+
+    const pos = getTouchPos(canvas, e);
+
+    ctx.strokeStyle = colorPicker.value;
+    ctx.lineWidth = brushSize.value;
+
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+
+    socket.emit('draw', {
+        roomId: ROOM_ID,
+        x0: lastX,
+        y0: lastY,
+        x1: pos.x,
+        y1: pos.y,
+        color: colorPicker.value,
+        size: brushSize.value
+    });
+
+    lastX = pos.x;
+    lastY = pos.y;
+}, { passive: false });
+
+// 3. Finger up event
+canvas.addEventListener('touchend', () => {
+    isDrawing = false;
+});
+

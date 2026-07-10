@@ -201,17 +201,22 @@ socket.on('user-disconnected', (userId) => {
 
 // Mute/unmute user function 
 muteBtn.addEventListener('click', () => {
-    // Get audio track from localstream
-    const audioTrack = localStream.getAudioTracks()[0];
+    let isMuted = false;
+
+    // Iterate to get every audio track 
+    localStream.getAudioTracks().forEach(track => {
+        track.enabled = !track.enabled;
+        // If its disable, its 100% muted
+        isMuted = !track.enabled;
+    });
 
     // If unmute, mute
-    if (audioTrack.enabled) {
+    if (!isMuted) {
         audioTrack.enabled = false;
         muteBtn.textContent = "Unmute Audio";
         muteBtn.classList.add('danger');
     } else {
     // If mute, unmute
-        audioTrack.enabled = true;
         muteBtn.textContent = "Mute Audio";
         muteBtn.classList.remove('danger');
     }
@@ -240,9 +245,22 @@ cameraBtn.addEventListener('click', () => {
 /////////////////////
 
 // Show message on screen
-function showMessage(text, type) {
+function showMessage(text, type, senderId = null) {
     const msgDiv = document.createElement('div');
     msgDiv.classList.add('message', type); // local/remote
+
+    // Verify whose ID is sending the text
+    if (type === 'remote' && senderId) {
+        const idLabel = document.createElement('small');
+        idLabel.innerText = `Guest (${senderId.substring(0,4)}):`;
+        idLabel.style.display = 'block';
+        idLabel.style.fontWeight = 'bold';
+        idLabel.style.marginBottom = '4px';
+        idLabel.style.color = '#cccccc';
+        msgDiv.appendChild(idLabel);
+    }
+
+    const textSpan = document.createElement('span');
     msgDiv.innerText = text;
     chatMessages.appendChild(msgDiv);
     
@@ -262,7 +280,7 @@ sendBtn.addEventListener('click', () => {
 
 // Receive message from other user
 socket.on('chat-message', (data) => {
-    showMessage(data.message, 'remote'); // show on 'GUEST' screen
+    showMessage(data.message, 'remote', data.senderId); // show on 'GUEST' screen
 });
 
 // Send message when pressing 'Enter'
@@ -279,6 +297,12 @@ chatInput.addEventListener('keypress', (event) => {
 // Share screen event
 shareScreenBtn.addEventListener('click', async () => {
     try {
+        // Verifies if screenshare is allowed
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+            alert("Screen sharing is not supported on mobile browsers.");
+            return; 
+        }
+
         if (!screenStream) {
             // 1. Ask browser to screenshare
             screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
